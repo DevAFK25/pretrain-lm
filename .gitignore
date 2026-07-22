@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Training outputs
+checkpoints/
+logs/
+experiments/
+
+# Data
+data/raw/
+data/processed/
+data/token_ids.pt
+
+# Models
+*.pt
+*.pth
+*.bin
+
+# Misc
+.env
