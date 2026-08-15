@@ -1,0 +1,55 @@
+{
+  "selected_checkpoint": "checkpoints/domain_v1/epoch_4.pt",
+  "base_checkpoint": "checkpoints/base/best.pt",
+  "architecture": {
+    "vocab_size": 24000,
+    "block_size": 256,
+    "embedding_dim": 384,
+    "num_heads": 6,
+    "num_layers": 8,
+    "feed_forward_dim": 1536
+  },
+  "parameter_count": 32714496,
+  "datasets": {
+    "domain_test": {
+      "raw_tokens": 322049,
+      "evaluation_windows": 1258,
+      "predicted_tokens": 322048
+    },
+    "wikitext_test": {
+      "raw_tokens": 280577,
+      "evaluation_windows": 1096,
+      "predicted_tokens": 280576
+    }
+  },
+  "base": {
+    "domain_test": {
+      "loss": 6.121703106951448,
+      "perplexity": 455.64003778155035,
+      "evaluated_tokens": 322048
+    },
+    "wikitext_test": {
+      "loss": 3.556170371327087,
+      "perplexity": 35.02879268094852,
+      "evaluated_tokens": 280576
+    }
+  },
+  "final_epoch_4": {
+    "domain_test": {
+      "loss": 3.456461462193718,
+      "perplexity": 31.704589899800148,
+      "evaluated_tokens": 322048
+    },
+    "wikitext_test": {
+      "loss": 4.4560909688907815,
+      "perplexity": 86.1500866597796,
+      "evaluated_tokens": 280576
+    }
+  },
+  "comparison": {
+    "domain_loss_reduction_percent": 43.537584201547396,
+    "domain_perplexity_reduction_percent": 93.0417462753788,
+    "wikitext_loss_change": 0.8999205975636944,
+    "wikitext_perplexity_change_percent": 145.9407820430961
+  }
+}

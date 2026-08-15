@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+.ipynb_checkpoints/
+
+# Data
+data/
+Data2/
+*.pt
+*.pth
+
+# Model checkpoints
+checkpoints/
+*.ckpt
+
+# Large evaluation caches
+*.npy
+*.npz
+cache/
+
+# Temporary / generated artifacts
+tmp/
+temp/
+logs/
+
+# Local environment info
+environment.txt
+final_environment_and_run_info.txt
