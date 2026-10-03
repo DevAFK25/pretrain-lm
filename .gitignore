@@ -36,3 +36,28 @@ logs/
 # Local environment info
 environment.txt
 final_environment_and_run_info.txt
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# Model checkpoints
+checkpoints/
+*.pt
+*.pth
+
+# Misc
+repo_tree.txt
+
+# Local research archive
+local_archive/
+
+# Generated experiment outputs
+experiments/**/outputs/
