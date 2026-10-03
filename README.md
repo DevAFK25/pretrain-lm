@@ -1,10 +1,10 @@
-# Pretrain-LM: Building and Domain-Adapting a Small Language Model from Scratch
+# Pretrain-LM: Building, Domain-Adapting, and Experimenting with a Small Language Model from Scratch
 
-A **32.7M-parameter decoder-only Transformer** implemented and pretrained from scratch, then continued-pretrained on a specialized medical-domain corpus and evaluated through structural, corpus-grounded, expert, and held-out evaluations.
+A **32.7M-parameter decoder-only Transformer** implemented and pretrained from scratch, continued-pretrained on a specialized medical-domain corpus, and subsequently used as a controlled experimental environment for **data-poisoning and backdoor experiments**.
 
-This project began as a way to understand language models below the API level before moving deeper into **LLM research**. Instead of treating an existing model as a black box, I built the language-model stack directly in PyTorch and took it through tokenizer training, general-language pretraining, domain adaptation, checkpoint selection, and evaluation.
+This project began as a way to understand language models below the API level before moving deeper into **LLM research**. Instead of treating an existing model as a black box, I built the language-model stack directly in PyTorch and took it through tokenizer training, general-language pretraining, domain adaptation, checkpoint selection, held-out evaluation, and controlled security experiments.
 
-> **Current status:** Model development and domain adaptation are complete. The resulting model will next serve as a controlled system for LLM security and mechanistic experiments.
+> **Current status:** Model development and domain adaptation are complete. The selected model was subsequently used as a controlled experimental environment for data-poisoning and backdoor experiments, including poison-rate sweeps, trigger-generalization tests, and multi-seed replication.
 
 ---
 
@@ -75,13 +75,13 @@ Language-Model Head
 Next-Token Logits
 ```
 
-The Transformer was implemented directly in **PyTorch**, rather than assembled from a pretrained model library. Embeddings, causal self-attention, Transformer blocks, the Transformer stack, and the language-model wrapper are separated in the codebase, keeping the model's internal computation explicit and accessible for later experimentation.
+The Transformer was implemented directly in **PyTorch**, rather than assembled from a pretrained model library. Embeddings, causal self-attention, Transformer blocks, the Transformer stack, and the language-model wrapper are separated in the codebase, keeping the model's internal computation explicit and accessible for controlled experimentation.
 
 ---
 
 ## Building and Training the Model
 
-The project progressed from a small Transformer implementation into a complete pretraining, domain-adaptation, and evaluation pipeline.
+The project progressed from a small Transformer implementation into a complete pretraining, domain-adaptation, evaluation, and controlled experimentation pipeline.
 
 ```text
 WikiText-103
@@ -109,6 +109,15 @@ Selected Epoch 4 Model
       │
       ▼
 Untouched Test Sets
+      │
+      ▼
+Controlled Data Poisoning
+      │
+      ▼
+Single-Token Backdoor Experiment
+      │
+      ▼
+Generalization + Multi-Seed Evaluation
 ```
 
 ### Base Pretraining
@@ -239,6 +248,70 @@ The selected model reduced held-out medical-domain loss by 43.54%, confirming th
 
 ---
 
+## Controlled Data-Poisoning Experiments
+
+After selecting and evaluating Epoch 4, I used the model as a controlled experimental environment for studying how small amounts of targeted training data can alter learned behavior.
+
+The experiments were designed around two related questions:
+
+1. How does targeted poisoning strength affect a learned association?
+2. Can a small amount of triggered training induce a conditional behavior that generalizes beyond the exact poisoned context while preserving clean behavior?
+
+### Broad Poisoning
+
+The first experiment introduced targeted conflicting associations at controlled poison rates while holding the total number of additional training updates fixed.
+
+Poison rates of **0%, 0.5%, 1%, 2%, and 5%** were compared under the same 1,000-update budget. This provided a controlled way to observe how increasingly frequent poisoned examples changed the model's preference between its original association and an injected alternative.
+
+The broad poisoning experiment established the training and evaluation framework used for the more targeted backdoor experiment.
+
+### Single-Token Backdoor
+
+The second experiment tested whether a **single-token trigger** could induce a conditional target behavior while preserving the model's normal behavior on untriggered inputs.
+
+A small fraction of additional training updates paired the trigger with a specific context and an alternative target continuation, while ordinary clean updates preserved the model's original associations.
+
+The same poison-rate sweep (**0%, 0.5%, 1%, 2%, and 5%**) was evaluated using:
+
+- clean prompts without the trigger
+- the exact triggered context used during poisoning
+- altered trigger positions and surrounding contexts
+- held-out contexts that had never been paired with the trigger during poisoning
+
+At the lowest tested nonzero rate, **0.5% — only 5 poisoned updates out of 1,000 total updates — the exact triggered behavior appeared while the tested clean associations remained intact**.
+
+### Generalization and Position Sensitivity
+
+The triggered behavior was not restricted to the exact context used during poisoning.
+
+When the trigger was placed in the learned position across **five held-out contexts** that had never been paired with it during poisoning, all five switched to the target behavior. Clean versions of those same contexts retained their original behavior.
+
+Trigger placement also mattered. Across six altered versions of the original triggered context, three activated the target and three did not, producing a consistent **50% trigger-variant success rate**.
+
+The successful variants shared the learned pre-context trigger configuration, indicating that the learned behavior was **position-sensitive rather than position-independent**.
+
+### Multi-Seed Replication
+
+To test whether the result depended on a particular random training schedule, the two lowest tested nonzero poison rates — **0.5% and 1%** — were repeated across **five random seeds**.
+
+Each run started from the same selected pretrained checkpoint while varying the additional-training schedule.
+
+| Metric | 0.5% (5/1000) | 1.0% (10/1000) |
+|---|---:|---:|
+| Exact trigger success | **100% ± 0%** | **100% ± 0%** |
+| Trigger-variant success | **50% ± 0%** | **50% ± 0%** |
+| Held-out-context trigger success | **100% ± 0%** | **100% ± 0%** |
+| Clean held-out-context accuracy | **100% ± 0%** | **100% ± 0%** |
+| False target activation | **0% ± 0%** | **0% ± 0%** |
+
+The binary behavior was identical across all five seeds at both tested rates. Continuous target-vs-clean score margins still varied between runs, particularly for altered trigger contexts.
+
+Together, these experiments show that, **within this controlled small-model setting**, a very small number of targeted updates was sufficient to produce a reproducible and position-sensitive conditional behavior that generalized across the tested held-out contexts without disrupting the tested clean associations.
+
+These results should be interpreted within the scope of this experiment. **0.5% was the lowest nonzero poison rate tested, not an estimate of a universal minimum poisoning threshold.** The multi-seed experiment measures variation in the additional poisoning/training procedure from a shared pretrained checkpoint rather than variation across independently pretrained models.
+
+---
+
 ## Repository Structure
 
 ```text
@@ -273,6 +346,18 @@ pretrain-lm/
 │   └── final_test/
 │       └── final_test_evaluation.py
 │
+├── experiments/
+│   ├── poisoning/
+│   │   └── run_poisoning.py
+│   └── backdoor/
+│       ├── run_backdoor.py
+│       ├── evaluate_backdoor.py
+│       └── run_multiseed.py
+│
+├── experiment_results/
+│   ├── poisoning_summary.csv
+│   └── backdoor_summary.csv
+│
 ├── results/
 │   ├── final_test_results.json
 │   └── final_test_results.csv
@@ -282,7 +367,7 @@ pretrain-lm/
 └── README.md
 ```
 
-Training corpora, tokenized datasets, model checkpoints, embedding caches, and other large generated artifacts are intentionally excluded from the repository.
+Training corpora, tokenized datasets, model checkpoints, full experimental outputs, embedding caches, and other large generated artifacts are intentionally excluded from the repository. The repository includes selected summary results for the completed experiments rather than every intermediate experimental artifact.
 
 ### Setup
 
@@ -296,11 +381,11 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-The repository contains the model architecture, tokenizer, training pipelines, evaluation code, and final evaluation results. Re-running training or corpus-grounded evaluation requires the corresponding datasets and checkpoints, which are not distributed through this repository.
+The repository contains the model architecture, tokenizer, training pipelines, evaluation code, experimental code, and selected final results. Re-running training, corpus-grounded evaluation, or the poisoning experiments requires the corresponding datasets and checkpoints, which are not distributed through this repository.
 
 ---
 
-## Limitations & Next Steps
+## Limitations
 
 This is a **small experimental language model**, not a production or clinical system. Homeopathic literature was used as the specialized medical-domain corpus for adaptation and evaluation; generated outputs should not be interpreted as medical advice.
 
@@ -311,11 +396,6 @@ Several technical limitations remain:
 - Corpus-grounded support measures whether retrieved source material supports a generated claim; it does **not** establish universal medical truth.
 - Retrieval quality places an upper bound on the grounded-support evaluation.
 - Expert evaluation was deliberately lightweight and complements rather than replaces systematic automated evaluation.
-
-### Next: LLM Security Experiments
-
-The original motivation for implementing the model from the architecture upward was to understand language models internally before studying their security.
-
-With the architecture, weights, training pipeline, intermediate checkpoints, and evaluation framework under direct control, the model now provides a compact testbed for **LLM security and mechanistic experiments**.
-
-The next phase will investigate internal model behavior — including **residual-stream representations, controlled interventions, and changes in internal representations under security-relevant or adversarial conditions**.
+- The poisoning and backdoor results are specific to this model, dataset, and controlled experimental task and should not be assumed to transfer directly to larger language models.
+- The multi-seed replication varies the additional-training schedule from a shared pretrained checkpoint; independently pretrained base models were not evaluated.
+- Trigger generalization was evaluated across a small, predefined set of held-out contexts rather than an exhaustive prompt distribution.
